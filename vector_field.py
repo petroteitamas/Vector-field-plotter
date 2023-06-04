@@ -3,7 +3,7 @@ import numpy as np
 from heatmap_calculator import *
 
 class vector_field():
-    def __init__(self, canvas, height, width, vecffunc, zoom = 1, dt = 0.001, iter = 100):
+    def __init__(self, canvas, height, width, vecffunc, zoom = 1, dt = 0.001, iter = 100, dxy = 10, animation = False):
         self.height = height
         self.width = width
         self.canvas = canvas
@@ -13,8 +13,13 @@ class vector_field():
         self.zoom = zoom
         self.dt = dt
         self.iter = int(iter)
+        self.animation = animation
         self.center()
         self.raster()
+        self.dxy = dxy
+        self.up = self.canvas.after(10, self.replot)
+        self.right_click_stop_event = False
+        self.in_calculation_loop = False
         pass
 
     def center(self):
@@ -52,7 +57,12 @@ class vector_field():
         return line_x, line_y
 
 
-
+    def state(self, state):
+        #print("State changed")
+        if state == 1: #in preocess
+            self.canvas.create_oval(5,5,40,40, fill = "#ffA500")
+        if state == 0: #ready
+            self.canvas.create_oval(5,5,40,40, fill = "#00ff00")
 
 
     def c2t(self, x, y):
@@ -78,7 +88,6 @@ class vector_field():
         arr2_x, arr2_y = self.c2t(x - zoom*scale*math.cos(direction-math.pi/4), y - zoom*scale*math.sin(direction-math.pi/4))
 
         width = 2
-        #color = "white"
         line = self.canvas.create_line(x0_m, y0_m, x1_m, y1_m, fill=color, width=width)
         line = self.canvas.create_line(x1_m, y1_m, arr1_x, arr1_y, fill=color, width=width)
         line = self.canvas.create_line(x1_m, y1_m, arr2_x, arr2_y, fill=color, width=width)
@@ -113,21 +122,48 @@ class vector_field():
 
 
     def bind_btn1(self, event):
-        x, y = self.ic2t(event.x, event.y, scale_x = self.zoom, scale_y = self.zoom)
-        #print("x0: ", x, "y0: ", y)
-        self.diffeqsolver(x, y)
-        self.show_diff_sol()
+        if self.in_calculation_loop:
+            self.right_click_stop_event = True
+            self.state(0)
+        else:
+            self.state(1)
+            self.right_click_stop_event = False
+            x, y = self.ic2t(event.x, event.y, scale_x = self.zoom, scale_y = self.zoom)
+            #print("x0: ", x, "y0: ", y)
+            self.diffeqsolver(x, y)
+            if not self.animation:
+                self.show_diff_sol()
 
     def bind_btn2(self, event):
+        self.right_click_stop_event = True
+        if not self.in_calculation_loop:
+            self.canvas.delete("all")
+            self.center()
+            self.raster()
+            self.draw_vector_field()
+        self.state(0)
+
+
+    def replot(self):
+        W = self.width
+        H = self.height
+        self.calculate_vector_field(int(-W/2), int(W/2), self.dxy, int(-H/2), int(H/2), self.dxy, self.zoom)
+        self.draw_vector_field()
+        self.state(0)
+
+    def bind_wheel(self, event):
+        if(event.delta > 0):
+            self.zoom = self.zoom  * 1.1
+        else:
+            self.zoom = self.zoom * 0.9  
         self.canvas.delete("all")
         self.center()
         self.raster()
-        self.draw_vector_field()
+        self.state(1)
+        self.canvas.update()
+        self.canvas.after_cancel(self.up)
+        self.up = self.canvas.after(200, self.replot)
 
-
-
-    def bind_wheel(self, event):
-        print(event)
 
 
     def diffeqsolver(self, x0, y0):
@@ -137,6 +173,7 @@ class vector_field():
         y = y0
 
         for i in range(1, self.iter):
+            self.in_calculation_loop = True
             xp, yp = self.vecffunc(x, y)
             if(xp > 1e10 or yp > 1e10):
                 break
@@ -145,20 +182,36 @@ class vector_field():
             y = y + yp * self.dt
             
             dist = math.sqrt((abs(self.diffplot[-1][0] - x)) ** 2 + (abs(self.diffplot[-1][1] - y)) ** 2)
-            if (dist * self.zoom > 4):
+            if (dist * self.zoom > 1):
                 self.diffplot = np.vstack([self.diffplot, [x, y]])
                 #print("Added", i, dist * self.zoom)
-                print("Calculating: ", int(i*100/self.iter), "%")
+                #print("Calculating: ", int(i*100/self.iter), "%")
+                if self.animation:
+                    self.show_last()
+                    self.canvas.update()
+                
             
             stop_conds = [dist * self.zoom > 5000,
-                          x * self.zoom > max(self.width, self.height) * 2]
+                          x * self.zoom > max(self.width, self.height) * 2,
+                          self.right_click_stop_event]
             if any(stop_conds):
-                print("END")
+                #print("END")
+                self.in_calculation_loop = False
+                self.state(0)
                 break
+        self.in_calculation_loop = False
+        self.state(0)
             
 
+    def show_last(self):
+        x0, y0 = self.c2t(self.diffplot[-2][0] * self.zoom, self.diffplot[-2][1]* self.zoom)
+        x1, y1 = self.c2t(self.diffplot[-1][0] * self.zoom, self.diffplot[-1][1]* self.zoom)
+        color = "white"
+        self.canvas.create_line(x0, y0, x1, y1, fill=color, width=2)
+
+
     def show_diff_sol(self):
-        print("Shape", self.diffplot.shape[0])
+        #print("Shape", self.diffplot.shape[0])
 
         for i in range(1, self.diffplot.shape[0]):
             x0, y0 = self.c2t(self.diffplot[i-1][0] * self.zoom, self.diffplot[i-1][1]* self.zoom)

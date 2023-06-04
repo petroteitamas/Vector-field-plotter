@@ -10,6 +10,7 @@ The project was motivated by a course I took at university.
 We learned how to examine the equilibrium stability of nonlinear second-order differential equations.
 In this project, I have created a simple program to check the correctness of our analytical test.
 
+
 ## Usage
 * First, replace the default equation in main.py. 
 * Then run the program to examine the graph, and modify the parameters if you think it is necessary.
@@ -17,6 +18,10 @@ In this project, I have created a simple program to check the correctness of our
 python main.py
 ```
 * With the Left-click, you can set an initial x, y position int the model. The numerical differential equation solver in this program will calculete the motion path of the model. 
+
+* With the right button you can stop the calculation and delete the particular solution diagrams.
+
+* Use the scroll wheel to zoom in.
 
 ## More details on how to use
 There are some stop condition, but the most important is the variable called ***iter***. You can also set a higher value to make the simulation run longer, but this will be reflected in the computation time.
@@ -52,6 +57,8 @@ def vectorfield(x, y):
 
     return xp, yp
 ```
+In a function you can use any valid solution e.g. if statement.
+
 
 * Then modify the parameters to something like this
 ```python 
@@ -70,3 +77,25 @@ python main.py
 <img src="./assets/img02.png" alt="Path" ><br>
 Vector field and motion path
 </p>
+
+
+
+## Comment
+* Make sure the simulation time is set correctly.
+<p align="center">
+<img src="./assets/img03.png" alt="dt = 0.01 [s]" width = 400><br>
+dt = 0.01 [s]
+</p>
+
+<p align="center">
+<img src="./assets/img04.png" alt="dt = 0.001 [s]" width = 400><br>
+dt = 0.001 [s]
+</p>
+
+<p align="center">
+<img src="./assets/img05.png" alt="dt = 0.0001 [s]" width = 400><br>
+dt = 0.0001 [s]
+</p>
+
+
+
