@@ -1,34 +1,42 @@
 import tkinter as tk
 import math
+from math import sqrt, sin, cos, tan
 import numpy as np
 import sys
 from heatmap_calculator import *
 from vector_field import vector_field
 
-#np.set_printoptions(threshold=sys.maxsize)
 
+## -------------------------------------------
+# Left-click to draw the path with the initial mouse position x, y.
+# Right-click to delete the path(s)
+
+# Set the variables
+W, H  = 1600, 800 # Window size
+zoom = 100 # Zoom level
+dxy = 20 # vector filed plot distance delta
+dt = 0.001 # simulation time delta
+iter = 1e5 # simulation max iteration
 
 # Define a function which uses 
-def vectormezo(x, y):
-    xp = 2*x*y - x + y
-    yp = 5*x**4+y**3+2*x-3*y
+def vectorfield(x, y):
+    xp = -4 * y + 2 * x * y - 8
+    yp = 4 * y**2 - x**2
 
     return xp, yp
+## -------------------------------------------
 
-
+# Only modify if you know what you are doing
 def main():
-    #H, W = 1000,2560
-    H, W = 1000,1920 #for Full HD
     top = tk.Tk()
     top.title("Vector field plot")
     C = tk.Canvas(top, bg="black", height=H, width=W)
-    vf = vector_field(C, H, W, vectormezo)
-    vf.raster()
-    #vf.draw_arrow(150, 150, 1,4 ,5)
-    dxy = 20
-    zoom = 800
+    vf = vector_field(C, H, W, vectorfield, zoom = zoom, dt = dt, iter = iter)
     vf.calculate_vector_field(int(-W/2), int(W/2), dxy, int(-H/2), int(H/2), dxy, zoom)
     vf.draw_vector_field()
+    top.bind('<Button-1>', vf.bind_btn1)
+    top.bind('<Button-3>', vf.bind_btn2)
+    top.bind("<MouseWheel>", vf.bind_wheel)
     top.mainloop()
 
 if __name__ == "__main__":
